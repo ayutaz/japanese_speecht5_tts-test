@@ -16,3 +16,8 @@ source venv/bin/activate
 ```bash
 uv pip install -r requirements.txt
 ```
+
+# convert to onnx(powershell for windows)
+```bash
+$kwargs='{"vocoder":"microsoft/speecht5_hifigan"}'; optimum-cli export onnx --model esnya/japanese_speecht5_tts --task text-to-audio --model-kwargs $kwargs --trust-remote-code japanese_speecht5_onnx
+```
