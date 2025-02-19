@@ -9,8 +9,15 @@ from speecht5_openjtalk_tokenizer import SpeechT5OpenjtalkTokenizer
 import soundfile
 import torch
 
-# MPS が利用可能なら "mps"、なければ "cpu" を使用（今回はモデル本体は MPS/CPU で動作）
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+# CUDA > MPS > CPU の順で利用可能なデバイスを選択
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
+
+print("Using device:", device)
 
 # vocoder を CPU で実行するためのラッパークラス
 class VocoderCPUWrapper(torch.nn.Module):
@@ -24,7 +31,7 @@ class VocoderCPUWrapper(torch.nn.Module):
 
 model_name = "esnya/japanese_speecht5_tts"
 with torch.no_grad():
-    # SpeechT5ForTextToSpeech を float32 でロードし、device に移動
+    # SpeechT5ForTextToSpeech を float32 でロードし、選択した device に移動
     model = SpeechT5ForTextToSpeech.from_pretrained(
         model_name, torch_dtype=torch.float32
     )
@@ -38,11 +45,11 @@ with torch.no_grad():
     vocoder = SpeechT5HifiGan.from_pretrained(
         "microsoft/speecht5_hifigan", torch_dtype=torch.float32
     )
-    vocoder.to("cpu")  # ここで CPU に移動
+    vocoder.to("cpu")  # CPU に移動
     vocoder_wrapper = VocoderCPUWrapper(vocoder)
 
     input_text = "吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。"
-    # processor により input_ids を生成し、device に転送
+    # processor により input_ids を生成し、選択した device に転送
     input_ids = processor(text=input_text, return_tensors="pt").input_ids.to(device)
 
     speaker_embeddings = np.random.uniform(-1, 1, (1, 16))
